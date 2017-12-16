@@ -10,7 +10,11 @@ goodkids = []
 wish_dics = []
 good_dics = []
 
+# Keeps if the child is in any gift list.
 child_in_gift = [False for x in range(1000000)]
+
+# Keeps the number of still available gifts for each gift id.
+cnt_gift_qnt = [1000 for x in range(1000)]
 
 
 def calc_gain(child_id, gift_id):
@@ -30,6 +34,13 @@ def calc_gain(child_id, gift_id):
   
   return (childhappiness + gifthappiness)
 
+
+
+def get_first_available_gift(lb = 0):
+  for i in range(1000):
+    if cnt_gift_qnt[i] > lb:
+      return i
+  return -1
 
 
 
@@ -76,13 +87,16 @@ resp = []
 # Optimize twins
 for i in range(0, 3999, 2):
   gifts = wishlist[i] + wishlist[i+1]
-  best_gift_id = wishlist[i][0]
+  best_gift_id = get_first_available_gift(1)
   best_gift_w = float(-2)
   for g in gifts:
+    if cnt_gift_qnt[g] <= 1:
+      continue
     gain = calc_gain(i, g) + calc_gain(i+1, g)
     if gain > best_gift_w:
       best_gift_w = gain
       best_gift_id = g
+  cnt_gift_qnt[best_gift_id] -= 2
   resp.append((i,   best_gift_id))
   resp.append((i+1, best_gift_id))
 
@@ -90,24 +104,29 @@ for i in range(0, 3999, 2):
 
 # Optimize non-twins
 for i in range(4000, len(wishlist)):
-  if child_in_gift[i] == False:
-    # The kid gets his most wanted gift...
-    resp.append((i, wishlist[i][0]))
-  else:
-    best_gift_id = wishlist[i][0]
-    best_gift_w = float(-2)
-    for gift_id in wishlist[i]:
-      gain = calc_gain(i, gift_id)
-      if gain > best_gift_w:
-        best_gift_w = gain
-        best_gift_id = gift_id
-    # TODO: Check each gift not in the wishlist, but has child i in
-    #       its goodkids.
-    resp.append((i, best_gift_id))
+  best_gift_id = get_first_available_gift()
+  best_gift_w = float(-2)
+  
+  for gift_id in wishlist[i]:
+    if cnt_gift_qnt[gift_id] == 0:
+     continue
+    
+    gain = calc_gain(i, gift_id)
+    if gain > best_gift_w:
+      best_gift_w = gain
+      best_gift_id = gift_id
+  
+  # TODO: Check each gift not in the wishlist, but has child i in
+  #       its goodkids.
+  
+  cnt_gift_qnt[best_gift_id] -= 1
+  resp.append((i, best_gift_id))
 
 
+
+# Printing result...
 fout = open('out', 'w')
-fout.write('ChildId,GiftId')
+fout.write('ChildId,GiftId\n')
 for (child_id, gift_id) in resp:
   fout.write(str(child_id) + ',' + str(gift_id) + '\n')
 fout.close()
